@@ -14,6 +14,8 @@ namespace StarterAssets
 		public bool sprint;
 		public bool crouch;
 
+		public bool flashlight;
+
 		[Header("Movement Settings")]
 		public bool analogMovement;
 
@@ -48,7 +50,18 @@ namespace StarterAssets
 		public void OnCrouch(InputValue value)
 		{
 			CrouchInput(value.isPressed);
+			
 		}
+
+		public void OnFlashlight(InputValue value)
+{
+    FlashlightInput(value.isPressed);
+}
+
+public void FlashlightInput(bool newFlashlightState)
+{
+    flashlight = newFlashlightState;
+}
 #endif
 
 
