@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 1bff91a9097e7314c897ac0fca50f534
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 328715
+  packageName: 'Low Poly Cave Generator [URP]'
+  packageVersion: 1.0
+  assetPath: Assets/Cave Generator/Prefabs/Player.prefab
+  uploadId: 782662

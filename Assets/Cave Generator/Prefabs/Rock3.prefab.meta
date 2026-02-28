@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 203378619c7142d4e801a34d78de9a89
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 328715
+  packageName: 'Low Poly Cave Generator [URP]'
+  packageVersion: 1.0
+  assetPath: Assets/Cave Generator/Prefabs/Rock3.prefab
+  uploadId: 782662
