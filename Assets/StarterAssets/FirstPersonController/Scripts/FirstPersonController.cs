@@ -76,6 +76,7 @@ namespace StarterAssets
 
 		// crouch
 		private bool _isCrouching = false;
+public bool IsCrouching => _isCrouching;
 		private float _targetHeight;
 		private Vector3 _targetCameraPosition;
 
