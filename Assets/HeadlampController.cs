@@ -15,48 +15,63 @@ namespace StarterAssets
         public float sprintDrainMultiplier = 2.5f;
 
         [Header("Flicker - Low Battery")]
-        [Tooltip("Battery % at which light starts flickering slightly")]
         public float lowBatteryThreshold = 30f;
-        [Tooltip("Battery % at which flickering gets heavy")]
         public float criticalBatteryThreshold = 10f;
 
         [Header("Flicker - Enemy Proximity")]
-        [Tooltip("Assign your enemy Transform here")]
         public Transform enemy;
-        [Tooltip("Distance at which the enemy starts causing flicker")]
         public float enemyFlickerRange = 8f;
 
         // Internal
         private StarterAssetsInputs _input;
         private float _baseIntensity;
         private float _flickerTimer;
-        private float _flickerInterval;
         private bool _isFlickering;
+        private bool _lightOn = true;
 
         private void Awake()
         {
-            _input = GetComponentInParent<StarterAssetsInputs>();
+            _input = FindObjectOfType<StarterAssetsInputs>();
+
+            if (_input == null)
+                Debug.LogError("HeadlampController: No StarterAssetsInputs found in scene!");
 
             if (headlight == null)
                 headlight = GetComponentInChildren<Light>();
 
             if (headlight == null)
-                Debug.LogError("HeadlampController: No Light component found! Attach a Spotlight as a child of the camera.");
+                Debug.LogError("HeadlampController: No Light component found!");
 
             _baseIntensity = maxIntensity;
-            _flickerInterval = Random.Range(0.05f, 0.15f);
         }
 
         private void Update()
         {
             if (headlight == null) return;
 
+            // Debug — remove once working
+            if (Input.GetKeyDown(KeyCode.F))
+                Debug.Log("F key detected via legacy input");
+
+            if (_input != null && _input.flashlight)
+            {
+                Debug.Log("Flashlight toggle triggered!");
+                _lightOn = !_lightOn;
+                _input.flashlight = false;
+            }
+
+            if (!_lightOn)
+            {
+                headlight.enabled = false;
+                return;
+            }
+
             DrainBattery();
             HandleIntensity();
             HandleFlicker();
         }
 
-        // ─── Battery ────────────────────────────────────────────────
+        // --- Battery ---
 
         private void DrainBattery()
         {
@@ -66,13 +81,12 @@ namespace StarterAssets
             battery = Mathf.Clamp(battery, 0f, 100f);
         }
 
-        /// <summary>Call this when the player picks up a battery.</summary>
         public void RechargeBattery(float amount)
         {
             battery = Mathf.Clamp(battery + amount, 0f, 100f);
         }
 
-        // ─── Intensity ───────────────────────────────────────────────
+        // --- Intensity ---
 
         private void HandleIntensity()
         {
@@ -84,37 +98,32 @@ namespace StarterAssets
 
             headlight.enabled = true;
 
-            // Scale intensity with battery level — starts dropping below 30%
             float batteryRatio = Mathf.Clamp01(battery / lowBatteryThreshold);
             _baseIntensity = Mathf.Lerp(minIntensity, maxIntensity, batteryRatio);
         }
 
-        // ─── Flicker ─────────────────────────────────────────────────
+        // --- Flicker ---
 
         private void HandleFlicker()
         {
             if (battery <= 0f) return;
 
-            bool nearEnemy = enemy != null &&
-                             Vector3.Distance(transform.position, enemy.position) <= enemyFlickerRange;
+            bool nearEnemy   = enemy != null &&
+                               Vector3.Distance(transform.position, enemy.position) <= enemyFlickerRange;
+            bool lowBattery  = battery <= lowBatteryThreshold;
+            bool critBattery = battery <= criticalBatteryThreshold;
 
-            bool lowBattery   = battery <= lowBatteryThreshold;
-            bool critBattery  = battery <= criticalBatteryThreshold;
-
-            // Determine flicker intensity
             float flickerStrength = 0f;
-            if (critBattery)   flickerStrength = 0.8f;
+            if (critBattery)     flickerStrength = 0.8f;
             else if (lowBattery) flickerStrength = 0.35f;
-            if (nearEnemy)     flickerStrength = Mathf.Max(flickerStrength, 0.6f);
+            if (nearEnemy)       flickerStrength = Mathf.Max(flickerStrength, 0.6f);
 
             if (flickerStrength <= 0f)
             {
-                // No flicker — set clean intensity
                 headlight.intensity = _baseIntensity;
                 return;
             }
 
-            // Tick flicker timer
             _flickerTimer -= Time.deltaTime;
             if (_flickerTimer <= 0f)
             {
@@ -122,19 +131,12 @@ namespace StarterAssets
                 _flickerTimer = Random.Range(0.04f, 0.2f / flickerStrength);
             }
 
-            if (_isFlickering)
-            {
-                // Random dip in intensity
-                float dip = Random.Range(0f, flickerStrength);
-                headlight.intensity = Mathf.Max(0f, _baseIntensity - _baseIntensity * dip);
-            }
-            else
-            {
-                headlight.intensity = _baseIntensity;
-            }
+            headlight.intensity = _isFlickering
+                ? Mathf.Max(0f, _baseIntensity - _baseIntensity * Random.Range(0f, flickerStrength))
+                : _baseIntensity;
         }
 
-        // ─── Debug ───────────────────────────────────────────────────
+        // --- Gizmos ---
 
         private void OnDrawGizmosSelected()
         {
@@ -143,4 +145,4 @@ namespace StarterAssets
             Gizmos.DrawWireSphere(transform.position, enemyFlickerRange);
         }
     }
-}   
+}
