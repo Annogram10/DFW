@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: e6eced55b331a554b95af831196644af
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 328715
+  packageName: 'Low Poly Cave Generator [URP]'
+  packageVersion: 1.0
+  assetPath: Assets/Cave Generator/Prefabs/Stalactite.prefab
+  uploadId: 782662

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c5ed0aa71e1202e44a08fa7c25e2fb35
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 328715
+  packageName: 'Low Poly Cave Generator [URP]'
+  packageVersion: 1.0
+  assetPath: Assets/Cave Generator/Materials/Terrain/TerrainMaterial.mat
+  uploadId: 782662

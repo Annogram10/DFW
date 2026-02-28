@@ -1,0 +1,73 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Water Mat
+  m_Shader: {fileID: -6465566751694194690, guid: f6ac775c10388bb4a915a00e547bdf27, type: 3}
+  m_Parent: {fileID: -876546973899608171, guid: f6ac775c10388bb4a915a00e547bdf27, type: 3}
+  m_ModifiedSerializedProperties: 16
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses:
+  - MOTIONVECTORS
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _Big_Waves_Speed: 1.5
+    - _Big_Waves_Stretch_X: 8
+    - _Big_Waves_Threshold: 1
+    - _Big_Waves_Threshold_Position_Nouse_Scale: 0.2
+    - _QueueControl: 0
+    - _QueueOffset: 0
+    - _Shoreline_Threshold: 1
+    - _Shoreline_Threshold_2: 0.2
+    - _Shoreline_Top_Threshold: 0.743
+    - _Tertiary_Colour_Noise_Scale: 0.03
+    - _Water_Depth: 1
+    - _Wave_Colour_Multiplier: 1
+    - _Wave_Movement: -0.5
+    - _Wave_Movement_Amplitude: 0.07
+    - _Wave_Movement_Speed: 3
+    - _Wave_Movement_Start: 1
+    - _Wave_Position_Difference_Multiplier: 0.02
+    - _Wave_Threshold: 0.7
+    - _Wave_Threshold_Min_Value: 0.8
+    - _Wave_Threshold_Multiplier: 0.04
+    - _Wave_Threshold_Noise_Multiplier: 0.5
+    - _Wave_Threshold_Noise_Scale: 0.53
+    - _Waves: 2.5
+    m_Colors:
+    - _Big_Waves_Speed: {r: 1, g: 0, b: 0, a: 0}
+    - _Big_Waves_Stretch: {r: 4, g: 0.5, b: 0, a: 0}
+    - _Deep_Water: {r: 0.47508067, g: 0.65553766, b: 0.685, a: 1}
+    - _Shallow_Water: {r: 0.92156863, g: 1, b: 1, a: 1}
+    - _Tertiary_Colour_Offset: {r: -32.95, g: 0, b: 0, a: 0}
+    - _Tertiary_Water_Colour: {r: 0.37250906, g: 0.56234545, b: 0.59099996, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
+--- !u!114 &4060104555677527170
+MonoBehaviour:
+  m_ObjectHideFlags: 11
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d0353a89b1f911e48b9e16bdc9f2e058, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  version: 10

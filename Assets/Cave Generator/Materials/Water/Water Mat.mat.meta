@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: fd42963bc6f313e4c837c8b794f0a9ac
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 328715
+  packageName: 'Low Poly Cave Generator [URP]'
+  packageVersion: 1.0
+  assetPath: Assets/Cave Generator/Materials/Water/Water Mat.mat
+  uploadId: 782662
