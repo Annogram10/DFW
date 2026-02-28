@@ -16,6 +16,8 @@ namespace StarterAssets
 		public float MoveSpeed = 4.0f;
 		[Tooltip("Sprint speed of the character in m/s")]
 		public float SprintSpeed = 6.0f;
+		[Tooltip("Crouch speed of the character in m/s")]
+		public float CrouchSpeed = 2.0f;
 		[Tooltip("Rotation speed of the character")]
 		public float RotationSpeed = 1.0f;
 		[Tooltip("Acceleration and deceleration")]
@@ -43,6 +45,18 @@ namespace StarterAssets
 		[Tooltip("What layers the character uses as ground")]
 		public LayerMask GroundLayers;
 
+		[Header("Crouch")]
+		[Tooltip("Height of the CharacterController when standing")]
+		public float StandingHeight = 2.0f;
+		[Tooltip("Height of the CharacterController when crouching")]
+		public float CrouchingHeight = 1.0f;
+		[Tooltip("How quickly the player transitions between standing and crouching")]
+		public float CrouchTransitionSpeed = 10.0f;
+		[Tooltip("Overhead check radius to prevent uncrouching inside geometry")]
+		public float OverheadCheckRadius = 0.3f;
+		[Tooltip("Layers to check overhead when trying to uncrouch")]
+		public LayerMask OverheadLayers;
+
 		[Header("Cinemachine")]
 		[Tooltip("The follow target set in the Cinemachine Virtual Camera that the camera will follow")]
 		public GameObject CinemachineCameraTarget;
@@ -60,11 +74,15 @@ namespace StarterAssets
 		private float _verticalVelocity;
 		private float _terminalVelocity = 53.0f;
 
+		// crouch
+		private bool _isCrouching = false;
+		private float _targetHeight;
+		private Vector3 _targetCameraPosition;
+
 		// timeout deltatime
 		private float _jumpTimeoutDelta;
 		private float _fallTimeoutDelta;
 
-	
 #if ENABLE_INPUT_SYSTEM
 		private PlayerInput _playerInput;
 #endif
@@ -88,7 +106,6 @@ namespace StarterAssets
 
 		private void Awake()
 		{
-			// get a reference to our main camera
 			if (_mainCamera == null)
 			{
 				_mainCamera = GameObject.FindGameObjectWithTag("MainCamera");
@@ -102,10 +119,13 @@ namespace StarterAssets
 #if ENABLE_INPUT_SYSTEM
 			_playerInput = GetComponent<PlayerInput>();
 #else
-			Debug.LogError( "Starter Assets package is missing dependencies. Please use Tools/Starter Assets/Reinstall Dependencies to fix it");
+			Debug.LogError("Starter Assets package is missing dependencies. Please use Tools/Starter Assets/Reinstall Dependencies to fix it");
 #endif
+			// initialise controller height and camera position
+			_controller.height = StandingHeight;
+			_targetHeight = StandingHeight;
+			_targetCameraPosition = CinemachineCameraTarget.transform.localPosition;
 
-			// reset our timeouts on start
 			_jumpTimeoutDelta = JumpTimeout;
 			_fallTimeoutDelta = FallTimeout;
 		}
@@ -114,6 +134,7 @@ namespace StarterAssets
 		{
 			JumpAndGravity();
 			GroundedCheck();
+			Crouch();
 			Move();
 		}
 
@@ -124,58 +145,96 @@ namespace StarterAssets
 
 		private void GroundedCheck()
 		{
-			// set sphere position, with offset
 			Vector3 spherePosition = new Vector3(transform.position.x, transform.position.y - GroundedOffset, transform.position.z);
 			Grounded = Physics.CheckSphere(spherePosition, GroundedRadius, GroundLayers, QueryTriggerInteraction.Ignore);
 		}
 
+		private void Crouch()
+		{
+			// Toggle crouch on button press (only while grounded)
+			if (_input.crouch && Grounded)
+			{
+				if (!_isCrouching)
+				{
+					_isCrouching = true;
+				}
+				else if (CanStandUp())
+				{
+					_isCrouching = false;
+				}
+
+				// Reset the input so it acts as a toggle rather than holding
+				_input.crouch = false;
+			}
+
+			// If crouching but left the ground (e.g. jumped), force standing if there's room
+			if (!Grounded && _isCrouching && CanStandUp())
+			{
+				_isCrouching = false;
+			}
+
+			_targetHeight = _isCrouching ? CrouchingHeight : StandingHeight;
+
+			// Smoothly interpolate the CharacterController height
+			if (!Mathf.Approximately(_controller.height, _targetHeight))
+			{
+				_controller.height = Mathf.Lerp(_controller.height, _targetHeight, Time.deltaTime * CrouchTransitionSpeed);
+
+				// Keep the controller's center aligned so the bottom stays grounded
+				_controller.center = new Vector3(0, _controller.height / 2f, 0);
+
+				// Move the camera target proportionally with the height change
+				float cameraHeightRatio = _controller.height / StandingHeight;
+				_targetCameraPosition.y = CinemachineCameraTarget.transform.localPosition.y;
+				CinemachineCameraTarget.transform.localPosition = new Vector3(
+					CinemachineCameraTarget.transform.localPosition.x,
+					Mathf.Lerp(CinemachineCameraTarget.transform.localPosition.y,
+						(CrouchingHeight + (StandingHeight - CrouchingHeight) * (1 - (1 - cameraHeightRatio))) * 0.85f,
+						Time.deltaTime * CrouchTransitionSpeed),
+					CinemachineCameraTarget.transform.localPosition.z
+				);
+			}
+		}
+
+		private bool CanStandUp()
+		{
+			// Cast a sphere above the player to check for overhead obstructions
+			Vector3 overheadPosition = transform.position + Vector3.up * StandingHeight;
+			return !Physics.CheckSphere(overheadPosition, OverheadCheckRadius, OverheadLayers, QueryTriggerInteraction.Ignore);
+		}
+
 		private void CameraRotation()
 		{
-			// if there is an input
 			if (_input.look.sqrMagnitude >= _threshold)
 			{
-				//Don't multiply mouse input by Time.deltaTime
 				float deltaTimeMultiplier = IsCurrentDeviceMouse ? 1.0f : Time.deltaTime;
-				
+
 				_cinemachineTargetPitch += _input.look.y * RotationSpeed * deltaTimeMultiplier;
 				_rotationVelocity = _input.look.x * RotationSpeed * deltaTimeMultiplier;
 
-				// clamp our pitch rotation
 				_cinemachineTargetPitch = ClampAngle(_cinemachineTargetPitch, BottomClamp, TopClamp);
 
-				// Update Cinemachine camera target pitch
 				CinemachineCameraTarget.transform.localRotation = Quaternion.Euler(_cinemachineTargetPitch, 0.0f, 0.0f);
 
-				// rotate the player left and right
 				transform.Rotate(Vector3.up * _rotationVelocity);
 			}
 		}
 
 		private void Move()
 		{
-			// set target speed based on move speed, sprint speed and if sprint is pressed
-			float targetSpeed = _input.sprint ? SprintSpeed : MoveSpeed;
+			// Use crouch speed if crouching, otherwise normal/sprint speed
+			float targetSpeed = _isCrouching ? CrouchSpeed : (_input.sprint ? SprintSpeed : MoveSpeed);
 
-			// a simplistic acceleration and deceleration designed to be easy to remove, replace, or iterate upon
-
-			// note: Vector2's == operator uses approximation so is not floating point error prone, and is cheaper than magnitude
-			// if there is no input, set the target speed to 0
 			if (_input.move == Vector2.zero) targetSpeed = 0.0f;
 
-			// a reference to the players current horizontal velocity
 			float currentHorizontalSpeed = new Vector3(_controller.velocity.x, 0.0f, _controller.velocity.z).magnitude;
 
 			float speedOffset = 0.1f;
 			float inputMagnitude = _input.analogMovement ? _input.move.magnitude : 1f;
 
-			// accelerate or decelerate to target speed
 			if (currentHorizontalSpeed < targetSpeed - speedOffset || currentHorizontalSpeed > targetSpeed + speedOffset)
 			{
-				// creates curved result rather than a linear one giving a more organic speed change
-				// note T in Lerp is clamped, so we don't need to clamp our speed
 				_speed = Mathf.Lerp(currentHorizontalSpeed, targetSpeed * inputMagnitude, Time.deltaTime * SpeedChangeRate);
-
-				// round speed to 3 decimal places
 				_speed = Mathf.Round(_speed * 1000f) / 1000f;
 			}
 			else
@@ -183,18 +242,13 @@ namespace StarterAssets
 				_speed = targetSpeed;
 			}
 
-			// normalise input direction
 			Vector3 inputDirection = new Vector3(_input.move.x, 0.0f, _input.move.y).normalized;
 
-			// note: Vector2's != operator uses approximation so is not floating point error prone, and is cheaper than magnitude
-			// if there is a move input rotate player when the player is moving
 			if (_input.move != Vector2.zero)
 			{
-				// move
 				inputDirection = transform.right * _input.move.x + transform.forward * _input.move.y;
 			}
 
-			// move the player
 			_controller.Move(inputDirection.normalized * (_speed * Time.deltaTime) + new Vector3(0.0f, _verticalVelocity, 0.0f) * Time.deltaTime);
 		}
 
@@ -202,23 +256,19 @@ namespace StarterAssets
 		{
 			if (Grounded)
 			{
-				// reset the fall timeout timer
 				_fallTimeoutDelta = FallTimeout;
 
-				// stop our velocity dropping infinitely when grounded
 				if (_verticalVelocity < 0.0f)
 				{
 					_verticalVelocity = -2f;
 				}
 
-				// Jump
-				if (_input.jump && _jumpTimeoutDelta <= 0.0f)
+				// Prevent jumping while crouching
+				if (_input.jump && _jumpTimeoutDelta <= 0.0f && !_isCrouching)
 				{
-					// the square root of H * -2 * G = how much velocity needed to reach desired height
 					_verticalVelocity = Mathf.Sqrt(JumpHeight * -2f * Gravity);
 				}
 
-				// jump timeout
 				if (_jumpTimeoutDelta >= 0.0f)
 				{
 					_jumpTimeoutDelta -= Time.deltaTime;
@@ -226,20 +276,16 @@ namespace StarterAssets
 			}
 			else
 			{
-				// reset the jump timeout timer
 				_jumpTimeoutDelta = JumpTimeout;
 
-				// fall timeout
 				if (_fallTimeoutDelta >= 0.0f)
 				{
 					_fallTimeoutDelta -= Time.deltaTime;
 				}
 
-				// if we are not grounded, do not jump
 				_input.jump = false;
 			}
 
-			// apply gravity over time if under terminal (multiply by delta time twice to linearly speed up over time)
 			if (_verticalVelocity < _terminalVelocity)
 			{
 				_verticalVelocity += Gravity * Time.deltaTime;
@@ -261,8 +307,11 @@ namespace StarterAssets
 			if (Grounded) Gizmos.color = transparentGreen;
 			else Gizmos.color = transparentRed;
 
-			// when selected, draw a gizmo in the position of, and matching radius of, the grounded collider
 			Gizmos.DrawSphere(new Vector3(transform.position.x, transform.position.y - GroundedOffset, transform.position.z), GroundedRadius);
+
+			// Draw overhead check gizmo
+			Gizmos.color = new Color(0.0f, 0.0f, 1.0f, 0.35f);
+			Gizmos.DrawSphere(transform.position + Vector3.up * StandingHeight, OverheadCheckRadius);
 		}
 	}
 }
