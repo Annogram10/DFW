@@ -22,14 +22,21 @@ public class ZombieAI : MonoBehaviour
     public float rotationSpeed = 5f;
     public float transitionDuration = 0f;
 
+    [Header("Attack")]
+    [Tooltip("How long after entering attack range before the kill triggers")]
+    public float attackDelay = 0.5f;
+
     [Header("Gravity")]
-    public float gravity = -9.8f;
+    public float gravity = -20f;
 
     private Animator _animator;
     private CharacterController _controller;
     private GameObject _player;
     private int _lastState = -1;
     private float _verticalVelocity = 0f;
+
+    private bool _attackPending = false;
+    private float _attackTimer = 0f;
 
     void Start()
     {
@@ -42,7 +49,7 @@ public class ZombieAI : MonoBehaviour
         if (_animator == null)
             Debug.LogWarning("ZombieAI: No Animator found.");
         if (_controller == null)
-            Debug.LogWarning("ZombieAI: No CharacterController found — add one to the zombie prefab.");
+            Debug.LogWarning("ZombieAI: No CharacterController found.");
     }
 
     void Update()
@@ -51,7 +58,7 @@ public class ZombieAI : MonoBehaviour
 
         float distance = Vector3.Distance(transform.position, _player.transform.position);
 
-        // Apply gravity
+        // Gravity
         if (_controller != null && !_controller.isGrounded)
             _verticalVelocity += gravity * Time.deltaTime;
         else
@@ -61,30 +68,55 @@ public class ZombieAI : MonoBehaviour
         {
             SetState(STATE_ATTACK, ANIM_ATTACK);
             FacePlayer();
-        }
-        else if (distance <= detectionRange)
-        {
-            SetState(STATE_WALK, ANIM_WALK);
-            FacePlayer();
-            MoveTowardPlayer();
+
+            // Start attack timer
+            if (!_attackPending)
+            {
+                _attackPending = true;
+                _attackTimer = attackDelay;
+            }
+
+            if (_attackPending)
+            {
+                _attackTimer -= Time.deltaTime;
+                if (_attackTimer <= 0f)
+                {
+                    KillPlayer();
+                    _attackTimer = attackDelay; // reset so it keeps firing if player stays in range
+                }
+            }
         }
         else
         {
-            SetState(STATE_IDLE, ANIM_IDLE);
+            _attackPending = false;
+
+            if (distance <= detectionRange)
+            {
+                SetState(STATE_WALK, ANIM_WALK);
+                FacePlayer();
+                MoveTowardPlayer();
+            }
+            else
+            {
+                SetState(STATE_IDLE, ANIM_IDLE);
+            }
         }
 
-        // Apply gravity via controller
         if (_controller != null)
             _controller.Move(new Vector3(0, _verticalVelocity, 0) * Time.deltaTime);
+    }
+
+    private void KillPlayer()
+    {
+        // TODO: replace this with actual player death logic later
+        Debug.Log("PLAYER KILLED BY ZOMBIE");
     }
 
     private void MoveTowardPlayer()
     {
         if (_controller == null) return;
-
         Vector3 direction = (_player.transform.position - transform.position).normalized;
         direction.y = 0f;
-
         _controller.Move(direction * moveSpeed * Time.deltaTime);
     }
 
@@ -101,7 +133,6 @@ public class ZombieAI : MonoBehaviour
         Vector3 direction = (_player.transform.position - transform.position).normalized;
         direction.y = 0f;
         if (direction == Vector3.zero) return;
-
         Quaternion targetRotation = Quaternion.LookRotation(direction);
         transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * rotationSpeed);
     }
