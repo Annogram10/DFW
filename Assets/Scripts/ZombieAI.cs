@@ -39,6 +39,15 @@ public class ZombieAI : MonoBehaviour
     private bool _attackPending = false;
     private float _attackTimer = 0f;
 
+    // Shared across all zombies — resets when the scene loads fresh via RuntimeInitializeOnLoadMethod
+    private static bool _isDead = false;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void ResetDeathFlag()
+    {
+        _isDead = false;
+    }
+
     void Start()
     {
         _animator   = GetComponent<Animator>();
@@ -55,6 +64,7 @@ public class ZombieAI : MonoBehaviour
 
     void Update()
     {
+        if (_isDead) return; // Stop all zombies updating after player dies
         if (_player == null || _animator == null) return;
 
         float distance = Vector3.Distance(transform.position, _player.transform.position);
@@ -70,7 +80,6 @@ public class ZombieAI : MonoBehaviour
             SetState(STATE_ATTACK, ANIM_ATTACK);
             FacePlayer();
 
-            // Start attack timer
             if (!_attackPending)
             {
                 _attackPending = true;
@@ -83,7 +92,6 @@ public class ZombieAI : MonoBehaviour
                 if (_attackTimer <= 0f)
                 {
                     KillPlayer();
-                    _attackTimer = attackDelay; // reset so it keeps firing if player stays in range
                 }
             }
         }
@@ -109,7 +117,8 @@ public class ZombieAI : MonoBehaviour
 
     private void KillPlayer()
     {
-        // TODO: replace this with actual player death logic later
+        if (_isDead) return;
+        _isDead = true;
         Debug.Log("PLAYER KILLED BY ZOMBIE");
         SceneManager.LoadScene("DeathScene");
     }
