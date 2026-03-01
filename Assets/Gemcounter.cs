@@ -1,24 +1,28 @@
 using UnityEngine;
-using TMPro;   // ✅ changed from UnityEngine.UI
+using TMPro;
 
 namespace StarterAssets
 {
     public class GemCounter : MonoBehaviour
     {
         [Header("UI")]
-        public TMP_Text gemText;   // ✅ changed from Text to TMP_Text
+        public TMP_Text gemText;
 
         [Header("Settings")]
         public string prefix = "Gems: ";
 
-        private int _gemCount = 0;
+        [SerializeField] private int _gemCount = 0;
 
-        private void Start()
+        private void Awake()
         {
+            // Auto-grab if you forget to assign it
+            if (gemText == null)
+                gemText = GetComponentInChildren<TMP_Text>();
+            
             UpdateUI();
         }
 
-        public void AddGems(int amount)
+        public void AddGems(int amount = 1)
         {
             _gemCount += amount;
             UpdateUI();
@@ -28,6 +32,8 @@ namespace StarterAssets
         {
             if (gemText != null)
                 gemText.text = prefix + _gemCount;
+            else
+                Debug.LogWarning("GemCounter: gemText not assigned and not found.");
         }
     }
 }

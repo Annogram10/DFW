@@ -1,135 +1,175 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.AI;
 
-public class ZombieSpawner : MonoBehaviour
+namespace StarterAssets
 {
-    [Header("References")]
-    public GameObject zombiePrefab;
-
-    [Header("Spawn Count")]
-    public int spawnCount = 5;
-
-    [Header("Spawn Radius Around Player")]
-    [Tooltip("Minimum distance from the player a zombie can spawn (so they don't appear on top of you)")]
-    public float minSpawnRadius = 10f;
-
-    [Tooltip("Maximum distance from the player a zombie can spawn (keeps them close enough to matter)")]
-    public float maxSpawnRadius = 30f;
-
-    [Header("NavMesh Sampling")]
-    [Tooltip("How far from the random point we search for a valid NavMesh position")]
-    public float navMeshSampleRange = 5f;
-
-    [Header("Spacing Between Zombies")]
-    [Tooltip("Minimum distance required between each spawned zombie")]
-    public float minSpacingBetweenZombies = 3f;
-
-    [Header("Attempts")]
-    public int maxAttemptsMultiplier = 40;
-
-    private GameObject player;
-
-    private void Start()
+    public class ZombieSpawner : MonoBehaviour
     {
-        player = GameObject.FindWithTag("Player");
+        [Header("References")]
+        public GameObject zombiePrefab;
+        public Transform caveRoot;
 
-        if (player == null)
+        [Header("Spawn Settings")]
+        public int maxZombiesAlive = 5;
+        public float spawnDelay = 3f;
+        [Tooltip("How often to check and respawn zombies (seconds)")]
+        public float respawnCheckInterval = 5f;
+
+        [Header("Spawn Distance From Player")]
+        public float minSpawnDistanceFromPlayer = 10f;
+        public float maxSpawnDistanceFromPlayer = 40f;
+
+        [Header("Raycast")]
+        public float rayStartPadding = 10f;
+        public float maxRayDistance = 200f;
+        public LayerMask groundLayers = ~0;
+
+        [Header("Placement Rules")]
+        public float minSpacingBetweenZombies = 4f;
+        public float maxSlopeAngle = 35f;
+        public float spawnYOffset = 0.5f;
+
+        [Header("Attempts")]
+        public int maxAttemptsMultiplier = 40;
+
+        private List<GameObject> _aliveZombies = new List<GameObject>();
+        private GameObject _player;
+        private Bounds _caveBounds;
+        private bool _boundsReady = false;
+
+        private void Start()
         {
-            Debug.LogError("ZombieSpawner: Could not find a GameObject tagged 'Player'. " +
-                           "Make sure PlayerCapsule is tagged as 'Player'.");
-            return;
+            _player = GameObject.FindWithTag("Player");
+            if (_player == null)
+                Debug.LogError("ZombieSpawner: No GameObject tagged 'Player' found!");
+
+            StartCoroutine(InitAndSpawn());
         }
 
-        SpawnZombies();
-    }
-
-    [ContextMenu("Spawn Zombies")]
-    public void SpawnZombies()
-    {
-        if (zombiePrefab == null)
+        private IEnumerator InitAndSpawn()
         {
-            Debug.LogError("ZombieSpawner: No zombie prefab assigned!");
-            return;
-        }
+            // Wait for cave to generate
+            yield return new WaitForSeconds(spawnDelay);
 
-        if (player == null)
-        {
-            player = GameObject.FindWithTag("Player");
-            if (player == null)
+            // Compute cave bounds once
+            if (caveRoot != null)
             {
-                Debug.LogError("ZombieSpawner: Still can't find the Player. Aborting spawn.");
-                return;
-            }
-        }
-
-        Vector3 playerPos = player.transform.position;
-
-        int spawned = 0;
-        int attempts = 0;
-        int maxAttempts = Mathf.Max(spawnCount * maxAttemptsMultiplier, 200);
-
-        List<Vector3> spawnedPositions = new List<Vector3>(spawnCount);
-
-        while (spawned < spawnCount && attempts < maxAttempts)
-        {
-            attempts++;
-
-            // Pick a random direction and a random distance within the donut radius
-            Vector2 randomCircle = Random.insideUnitCircle.normalized;
-            float distance = Random.Range(minSpawnRadius, maxSpawnRadius);
-
-            Vector3 candidatePos = new Vector3(
-                playerPos.x + randomCircle.x * distance,
-                playerPos.y,
-                playerPos.y + randomCircle.y * distance  // intentional: XZ plane offset
-            );
-
-            // Correct Z — redo this properly on XZ plane
-            candidatePos = new Vector3(
-                playerPos.x + randomCircle.x * distance,
-                playerPos.y,
-                playerPos.z + randomCircle.y * distance
-            );
-
-            // Make sure the point lands on the NavMesh
-            if (!NavMesh.SamplePosition(candidatePos, out NavMeshHit hit, navMeshSampleRange, NavMesh.AllAreas))
-                continue;
-
-            Vector3 spawnPos = hit.position;
-
-            // Enforce minimum spacing between zombies
-            bool tooClose = false;
-            for (int i = 0; i < spawnedPositions.Count; i++)
-            {
-                if (Vector3.Distance(spawnPos, spawnedPositions[i]) < minSpacingBetweenZombies)
+                var renderers = caveRoot.GetComponentsInChildren<Renderer>();
+                if (renderers.Length > 0)
                 {
-                    tooClose = true;
-                    break;
+                    _caveBounds = renderers[0].bounds;
+                    for (int i = 1; i < renderers.Length; i++)
+                        _caveBounds.Encapsulate(renderers[i].bounds);
+                    _boundsReady = true;
                 }
             }
-            if (tooClose) continue;
 
-            Instantiate(zombiePrefab, spawnPos, Quaternion.identity);
-            spawnedPositions.Add(spawnPos);
-            spawned++;
+            if (!_boundsReady)
+            {
+                Debug.LogError("ZombieSpawner: Could not compute cave bounds. Assign caveRoot.");
+                yield break;
+            }
+
+            // Initial spawn
+            SpawnZombies();
+
+            // Keep checking and respawning forever
+            while (true)
+            {
+                yield return new WaitForSeconds(respawnCheckInterval);
+                CleanDeadZombies();
+                if (_aliveZombies.Count < maxZombiesAlive)
+                    SpawnZombies();
+            }
         }
 
-        Debug.Log($"ZombieSpawner: Spawned {spawned}/{spawnCount} zombies in {attempts} attempts " +
-                  $"around player at {playerPos}.");
-    }
+        private void CleanDeadZombies()
+        {
+            _aliveZombies.RemoveAll(z => z == null);
+        }
 
-    // Draw spawn radius gizmos in the Scene view so you can visualize the donut
-    private void OnDrawGizmosSelected()
-    {
-        Vector3 center = player != null
-            ? player.transform.position
-            : transform.position;
+        private void SpawnZombies()
+        {
+            if (zombiePrefab == null)
+            {
+                Debug.LogError("ZombieSpawner: No zombie prefab assigned!");
+                return;
+            }
 
-        Gizmos.color = new Color(1f, 0f, 0f, 0.2f);
-        Gizmos.DrawWireSphere(center, maxSpawnRadius);
+            int toSpawn = maxZombiesAlive - _aliveZombies.Count;
+            if (toSpawn <= 0) return;
 
-        Gizmos.color = new Color(1f, 0.5f, 0f, 0.2f);
-        Gizmos.DrawWireSphere(center, minSpawnRadius);
+            float minY = _caveBounds.min.y;
+            float maxY = _caveBounds.max.y;
+
+            int spawned = 0;
+            int attempts = 0;
+            int maxAttempts = Mathf.Max(toSpawn * maxAttemptsMultiplier, 200);
+
+            List<Vector3> spawnedPositions = new List<Vector3>();
+
+            // Seed with existing zombie positions so new ones space away from them
+            foreach (var z in _aliveZombies)
+                if (z != null) spawnedPositions.Add(z.transform.position);
+
+            while (spawned < toSpawn && attempts < maxAttempts)
+            {
+                attempts++;
+
+                float x = Random.Range(_caveBounds.min.x, _caveBounds.max.x);
+                float z = Random.Range(_caveBounds.min.z, _caveBounds.max.z);
+
+                Vector3 rayOrigin = new Vector3(x, maxY + rayStartPadding, z);
+
+                if (!Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, maxRayDistance, groundLayers))
+                    continue;
+
+                float slope = Vector3.Angle(hit.normal, Vector3.up);
+                if (slope > maxSlopeAngle) continue;
+
+                if (hit.point.y < minY - 2f) continue;
+
+                Vector3 spawnPos = hit.point + Vector3.up * spawnYOffset;
+
+                // Must be within distance range from player
+                if (_player != null)
+                {
+                    float distToPlayer = Vector3.Distance(spawnPos, _player.transform.position);
+                    if (distToPlayer < minSpawnDistanceFromPlayer || distToPlayer > maxSpawnDistanceFromPlayer)
+                        continue;
+                }
+
+                // Spacing check
+                bool tooClose = false;
+                foreach (var p in spawnedPositions)
+                {
+                    if (Vector3.Distance(spawnPos, p) < minSpacingBetweenZombies)
+                    {
+                        tooClose = true;
+                        break;
+                    }
+                }
+                if (tooClose) continue;
+
+                GameObject zombie = Instantiate(zombiePrefab, spawnPos, Quaternion.identity);
+                _aliveZombies.Add(zombie);
+                spawnedPositions.Add(spawnPos);
+                spawned++;
+            }
+
+            Debug.Log($"ZombieSpawner: Spawned {spawned}/{toSpawn} zombies. Total alive: {_aliveZombies.Count}");
+        }
+
+        private void OnDrawGizmosSelected()
+        {
+            if (_player != null)
+            {
+                Gizmos.color = new Color(1f, 0f, 0f, 0.15f);
+                Gizmos.DrawWireSphere(_player.transform.position, maxSpawnDistanceFromPlayer);
+                Gizmos.color = new Color(1f, 0.5f, 0f, 0.15f);
+                Gizmos.DrawWireSphere(_player.transform.position, minSpawnDistanceFromPlayer);
+            }
+        }
     }
 }
