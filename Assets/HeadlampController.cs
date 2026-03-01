@@ -6,7 +6,7 @@ namespace StarterAssets
     {
         [Header("Light Settings")]
         public Light headlight;
-        public float maxIntensity = 6f;
+        public float maxIntensity = 40f;
         public float minIntensity = 1.5f;
 
         [Header("Battery")]
