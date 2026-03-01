@@ -1,9 +1,0 @@
-fileFormatVersion: 2
-guid: 3953c1aa74950ae429478551426803d2
-AssetOrigin:
-  serializedVersion: 1
-  productId: 328715
-  packageName: 'Low Poly Cave Generator [URP]'
-  packageVersion: 1.0
-  assetPath: Assets/Cave Generator/Scripts/MarchingCubesTable.cs
-  uploadId: 782662

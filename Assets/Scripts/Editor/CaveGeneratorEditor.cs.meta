@@ -1,0 +1,9 @@
+fileFormatVersion: 2
+guid: f8bcf92c8872284489e42897a067460e
+AssetOrigin:
+  serializedVersion: 1
+  productId: 328715
+  packageName: 'Low Poly Cave Generator [URP]'
+  packageVersion: 1.0
+  assetPath: Assets/Cave Generator/Scripts/Editor/CaveGeneratorEditor.cs
+  uploadId: 782662
