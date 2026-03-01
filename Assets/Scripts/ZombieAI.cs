@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class ZombieAI : MonoBehaviour
 {
@@ -10,7 +11,7 @@ public class ZombieAI : MonoBehaviour
     private static readonly int ZombieStateParam = Animator.StringToHash("ZombieState");
 
     private const string ANIM_IDLE   = "Z_Idle";
-    private const string ANIM_WALK   = "Z_Walk1_InPlace";
+    private const string ANIM_WALK   = "Z_Run";
     private const string ANIM_ATTACK = "Z_Attack";
 
     [Header("Detection")]
@@ -110,6 +111,7 @@ public class ZombieAI : MonoBehaviour
     {
         // TODO: replace this with actual player death logic later
         Debug.Log("PLAYER KILLED BY ZOMBIE");
+        SceneManager.LoadScene("DeathScene");
     }
 
     private void MoveTowardPlayer()
