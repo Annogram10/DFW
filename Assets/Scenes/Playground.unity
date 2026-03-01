@@ -1643,6 +1643,10 @@ PrefabInstance:
       value: Zombie1
       objectReference: {fileID: 0}
     - target: {fileID: 8761399005003055137, guid: 8a14edac3bc1145caa4dda8926fab881, type: 3}
+      propertyPath: m_Speed
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8761399005003055137, guid: 8a14edac3bc1145caa4dda8926fab881, type: 3}
       propertyPath: m_Radius
       value: 0.5
       objectReference: {fileID: 0}
